@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sanjana's Daily Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0C0C0C;
+  --surface: #161616;
+  --card: #1E1E1E;
+  --border: #2A2A2A;
+  --text: #F0EDE8;
+  --muted: #555;
+  --english: #9B59B6;
+  --excel: #217346;
+  --sap: #0070F3;
+  --sql: #E8440A;
+  --python: #F2C811;
+  --pbi: #00B4D8;
+  --sister: #E91E8C;
+  --chore: #444;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+/* HEADER */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 20px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.header-left h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.header-left .date {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.streak-badge {
+  background: linear-gradient(135deg, #FF6B35, #E8440A);
+  padding: 7px 14px;
+  border-radius: 100px;
+  text-align: center;
+}
+
+.streak-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: white;
+  line-height: 1;
+}
+
+.streak-label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.progress-wrap {
+  background: var(--border);
+  border-radius: 100px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 100px;
+  background: linear-gradient(90deg, #0070F3, #9B59B6);
+  transition: width 0.5s ease;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.progress-label span { font-size: 11px; color: var(--muted); }
+.progress-label strong { font-size: 11px; color: var(--text); }
+
+/* NAV TABS */
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  position: sticky;
+  top: 113px;
+  z-index: 99;
+}
+
+.nav-tab {
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.nav-tab.active {
+  color: var(--text);
+  border-bottom-color: #0070F3;
+}
+
+/* MAIN */
+.main { padding: 16px 20px; max-width: 600px; margin: 0 auto; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* SECTION */
+.section-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 20px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* BLOCKS */
+.block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 7px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  cursor: pointer;
+}
+
+.block.done {
+  border-color: rgba(255,255,255,0.08);
+  opacity: 0.6;
+}
+
+.block-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.block-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  font-size: 11px;
+}
+
+.block.done .block-check {
+  background: #2ECC71;
+  border-color: #2ECC71;
+  color: white;
+}
+
+.block-accent {
+  width: 3px;
+  height: 32px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+
+.block-info { flex: 1; min-width: 0; }
+
+.block-time {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.block-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.block-type {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+
+/* SKILL STATS */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+.stat-icon { font-size: 16px; margin-bottom: 3px; }
+.stat-name { font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+.stat-streak { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; line-height: 1; }
+.stat-days { font-size: 9px; color: var(--muted); }
+
+/* NOTE */
+.note-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 7px;
+}
+
+.note-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.note-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 11px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+  min-height: 55px;
+}
+
+.note-input:focus { border-color: var(--sap); }
+.note-input::placeholder { color: var(--muted); }
+
+.btn-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+.note-save {
+  background: var(--sap);
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.note-save:hover { opacity: 0.85; }
+
+/* ACTION BUTTONS */
+.action-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.action-btn:hover { border-color: #0070F3; color: #0070F3; }
+.action-btn.danger:hover { border-color: var(--sql); color: var(--sql); }
+
+.action-btn.notif-on { border-color: #2ECC71; color: #2ECC71; }
+
+/* MOTIVATIONAL */
+.motive {
+  background: linear-gradient(135deg, rgba(0,112,243,0.1), rgba(155,89,182,0.1));
+  border: 1px solid rgba(0,112,243,0.2);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.motive-text {
+  font-size: 12px;
+  color: rgba(240,237,232,0.7);
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.motive-text strong { color: var(--text); font-style: normal; }
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #2ECC71;
+  color: white;
+  padding: 10px 22px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: transform 0.3s ease;
+  z-index: 999;
+  white-space: nowrap;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ===================== HISTORY TAB ===================== */
+.month-selector {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.month-btn {
+  padding: 6px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.month-btn.active, .month-btn:hover {
+  border-color: #0070F3;
+  color: #0070F3;
+  background: rgba(0,112,243,0.08);
+}
+
+.history-day {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.history-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.history-day-header:hover { background: rgba(255,255,255,0.03); }
+
+.history-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.history-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-pct {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.history-chevron {
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+
+.history-day.expanded .history-chevron { transform: rotate(180deg); }
+
+.history-detail {
+  display: none;
+  padding: 0 14px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.history-day.expanded .history-detail { display: block; }
+
+.history-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.history-block-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.06);
+  color: var(--muted);
+}
+
+.history-block-pill.done-pill {
+  background: rgba(46,204,113,0.15);
+  color: #2ECC71;
+}
+
+.history-note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(240,237,232,0.6);
+  font-style: italic;
+  line-height: 1.5;
+  padding: 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+}
+
+.empty-history {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* MONTH SUMMARY */
+.month-summary {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  text-align: center;
+}
+
+.summary-stat-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.summary-stat-lbl {
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+/* EXPORT BTN */
+.export-btn {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(33,115,70,0.3), rgba(33,115,70,0.1));
+  border: 1px solid rgba(33,115,70,0.5);
+  color: #2ECC71;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 14px;
+  transition: all 0.2s;
+}
+
+.export-btn:hover {
+  background: linear-gradient(135deg, rgba(33,115,70,0.5), rgba(33,115,70,0.2));
+}
+
+/* NOTIF BANNER */
+.notif-banner {
+  background: rgba(0,112,243,0.1);
+  border: 1px solid rgba(0,112,243,0.25);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.notif-banner-text {
+  font-size: 12px;
+  color: rgba(240,237,232,0.7);
+  flex: 1;
+}
+
+.notif-enable-btn {
+  background: #0070F3;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.notif-enable-btn:hover { opacity: 0.85; }
+
+#notifBanner { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="header-left">
+      <h1>Sanjana's Tracker 🔥</h1>
+      <div class="date" id="dateDisplay"></div>
+    </div>
+    <div class="streak-badge">
+      <div class="streak-num" id="streakNum">0</div>
+      <div class="streak-label">Day Streak</div>
+    </div>
+  </div>
+  <div class="progress-label">
+    <span>Today's Progress</span>
+    <strong id="progressText">0 / 18 done</strong>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('today')">📋 Today</button>
+  <button class="nav-tab" onclick="switchTab('history')">📅 History</button>
+  <button class="nav-tab" onclick="switchTab('settings')">⚙️ Settings</button>
+</div>
+
+<div class="main">
+
+  <!-- ===================== TODAY TAB ===================== -->
+  <div class="tab-content active" id="tab-today">
+
+    <!-- Notification banner -->
+    <div class="notif-banner" id="notifBanner">
+      <div class="notif-banner-text">🔔 Enable browser notifications to get daily study reminders!</div>
+      <button class="notif-enable-btn" onclick="enableNotifications()">Enable</button>
+    </div>
+
+    <div class="motive" id="motiveBox">
+      <div class="motive-text" id="motiveText">Loading your motivation...</div>
+    </div>
+
+    <!-- MORNING -->
+    <div class="section-label">Morning Block</div>
+
+    <div class="block" id="b0" onclick="toggle('b0')">
+      <div class="block-inner">
+        <div class="block-check" id="c0"></div>
+        <div class="block-accent" style="background:#F4845F"></div>
+        <div class="block-info">
+          <div class="block-time">8:00 – 9:00 AM</div>
+          <div class="block-title">☀️ Wake + freshen + breakfast</div>
+        </div>
+        <div class="block-type" style="background:rgba(244,132,95,0.15);color:#F4845F">Life</div>
+      </div>
+    </div>
+
+    <div class="block" id="b1" onclick="toggle('b1')">
+      <div class="block-inner">
+        <div class="block-check" id="c1"></div>
+        <div class="block-accent" style="background:var(--sister)"></div>
+        <div class="block-info">
+          <div class="block-time">9:00 – 9:30 AM · FIXED</div>
+          <div class="block-title">🏢 Sister's Business</div>
+        </div>
+        <div class="block-type" style="background:rgba(233,30,140,0.15);color:var(--sister)">Fixed</div>
+      </div>
+    </div>
+
+    <div class="block" id="b2" onclick="toggle('b2')">
+      <div class="block-inner">
+        <div class="block-check" id="c2"></div>
+        <div class="block-accent" style="background:var(--english)"></div>
+        <div class="block-info">
+          <div class="block-time">9:30 – 10:00 AM</div>
+          <div class="block-title">🗣️ English — speak + write 3 sentences</div>
+        </div>
+        <div class="block-type" style="background:rgba(155,89,182,0.15);color:var(--english)">English</div>
+      </div>
+    </div>
+
+    <div class="block" id="b3" onclick="toggle('b3')">
+      <div class="block-inner">
+        <div class="block-check" id="c3"></div>
+        <div class="block-accent" style="background:var(--excel)"></div>
+        <div class="block-info">
+          <div class="block-time">10:00 – 10:30 AM</div>
+          <div class="block-title">📗 Excel — build something</div>
+        </div>
+        <div class="block-type" style="background:rgba(33,115,70,0.15);color:var(--excel)">Excel</div>
+      </div>
+    </div>
+
+    <div class="block" id="b4" onclick="toggle('b4')">
+      <div class="block-inner">
+        <div class="block-check" id="c4"></div>
+        <div class="block-accent" style="background:var(--sap)"></div>
+        <div class="block-info">
+          <div class="block-time">10:30 – 11:00 AM</div>
+          <div class="block-title">⚙️ SAP — study + explore</div>
+        </div>
+        <div class="block-type" style="background:rgba(0,112,243,0.15);color:var(--sap)">SAP</div>
+      </div>
+    </div>
+
+    <div class="block" id="b5" onclick="toggle('b5')">
+      <div class="block-inner">
+        <div class="block-check" id="c5"></div>
+        <div class="block-accent" style="background:var(--chore)"></div>
+        <div class="block-info">
+          <div class="block-time">11:00 – 11:30 AM</div>
+          <div class="block-title">🏠 Household chores / free buffer</div>
+        </div>
+        <div class="block-type" style="background:rgba(68,68,68,0.3);color:#888">Chores</div>
+      </div>
+    </div>
+
+    <!-- MID MORNING -->
+    <div class="section-label">Mid-Morning Block</div>
+
+    <div class="block" id="b6" onclick="toggle('b6')">
+      <div class="block-inner">
+        <div class="block-check" id="c6"></div>
+        <div class="block-accent" style="background:var(--sql)"></div>
+        <div class="block-info">
+          <div class="block-time">11:30 AM – 12:30 PM</div>
+          <div class="block-title">🗄️ SQL — study + practice (first hour)</div>
+        </div>
+        <div class="block-type" style="background:rgba(232,68,10,0.15);color:var(--sql)">SQL</div>
+      </div>
+    </div>
+
+    <div class="block" id="b7" onclick="toggle('b7')">
+      <div class="block-inner">
+        <div class="block-check" id="c7"></div>
+        <div class="block-accent" style="background:var(--sql)"></div>
+        <div class="block-info">
+          <div class="block-time">12:30 – 1:30 PM</div>
+          <div class="block-title">🗄️ SQL — continued (second hour)</div>
+        </div>
+        <div class="block-type" style="background:rgba(232,68,10,0.15);color:var(--sql)">SQL</div>
+      </div>
+    </div>
+
+    <!-- AFTERNOON -->
+    <div class="section-label">Afternoon Block</div>
+
+    <div class="block" id="b8" onclick="toggle('b8')">
+      <div class="block-inner">
+        <div class="block-check" id="c8"></div>
+        <div class="block-accent" style="background:#444"></div>
+        <div class="block-info">
+          <div class="block-time">1:30 – 2:30 PM</div>
+          <div class="block-title">🍱 Lunch + rest</div>
+        </div>
+        <div class="block-type" style="background:rgba(68,68,68,0.3);color:#888">Rest</div>
+      </div>
+    </div>
+
+    <div class="block" id="b9" onclick="toggle('b9')">
+      <div class="block-inner">
+        <div class="block-check" id="c9"></div>
+        <div class="block-accent" style="background:var(--python)"></div>
+        <div class="block-info">
+          <div class="block-time">2:30 – 4:00 PM</div>
+          <div class="block-title">🐍 Python — study + practice</div>
+        </div>
+        <div class="block-type" style="background:rgba(242,200,17,0.15);color:#A67C00">Python</div>
+      </div>
+    </div>
+
+    <div class="block" id="b10" onclick="toggle('b10')">
+      <div class="block-inner">
+        <div class="block-check" id="c10"></div>
+        <div class="block-accent" style="background:var(--chore)"></div>
+        <div class="block-info">
+          <div class="block-time">4:00 – 4:30 PM</div>
+          <div class="block-title">🏠 Chores / nap if needed</div>
+        </div>
+        <div class="block-type" style="background:rgba(68,68,68,0.3);color:#888">Chores</div>
+      </div>
+    </div>
+
+    <!-- EVENING -->
+    <div class="section-label">Evening Block</div>
+
+    <div class="block" id="b11" onclick="toggle('b11')">
+      <div class="block-inner">
+        <div class="block-check" id="c11"></div>
+        <div class="block-accent" style="background:var(--python)"></div>
+        <div class="block-info">
+          <div class="block-time">4:30 – 5:30 PM</div>
+          <div class="block-title">🐍 Python — continued</div>
+        </div>
+        <div class="block-type" style="background:rgba(242,200,17,0.15);color:#A67C00">Python</div>
+      </div>
+    </div>
+
+    <div class="block" id="b12" onclick="toggle('b12')">
+      <div class="block-inner">
+        <div class="block-check" id="c12"></div>
+        <div class="block-accent" style="background:var(--pbi)"></div>
+        <div class="block-info">
+          <div class="block-time">5:30 – 6:00 PM</div>
+          <div class="block-title">📊 Power BI — build something</div>
+        </div>
+        <div class="block-type" style="background:rgba(0,180,216,0.15);color:var(--pbi)">Power BI</div>
+      </div>
+    </div>
+
+    <div class="block" id="b13" onclick="toggle('b13')">
+      <div class="block-inner">
+        <div class="block-check" id="c13"></div>
+        <div class="block-accent" style="background:var(--chore)"></div>
+        <div class="block-info">
+          <div class="block-time">6:00 – 7:00 PM</div>
+          <div class="block-title">🏠 Free time / household chores</div>
+        </div>
+        <div class="block-type" style="background:rgba(68,68,68,0.3);color:#888">Free</div>
+      </div>
+    </div>
+
+    <div class="block" id="b14" onclick="toggle('b14')">
+      <div class="block-inner">
+        <div class="block-check" id="c14"></div>
+        <div class="block-accent" style="background:#1ABC9C"></div>
+        <div class="block-info">
+          <div class="block-time">7:00 – 7:30 PM</div>
+          <div class="block-title">📝 Light review — revise today</div>
+        </div>
+        <div class="block-type" style="background:rgba(26,188,156,0.15);color:#1ABC9C">Review</div>
+      </div>
+    </div>
+
+    <div class="block" id="b15" onclick="toggle('b15')">
+      <div class="block-inner">
+        <div class="block-check" id="c15"></div>
+        <div class="block-accent" style="background:#444"></div>
+        <div class="block-info">
+          <div class="block-time">7:30 – 8:30 PM</div>
+          <div class="block-title">🍽️ Dinner + wind down</div>
+        </div>
+        <div class="block-type" style="background:rgba(68,68,68,0.3);color:#888">Life</div>
+      </div>
+    </div>
+
+    <div class="block" id="b16" onclick="toggle('b16')">
+      <div class="block-inner">
+        <div class="block-check" id="c16"></div>
+        <div class="block-accent" style="background:var(--sister)"></div>
+        <div class="block-info">
+          <div class="block-time">8:30 – 9:00 PM · FIXED</div>
+          <div class="block-title">🏢 Sister's Business (evening)</div>
+        </div>
+        <div class="block-type" style="background:rgba(233,30,140,0.15);color:var(--sister)">Fixed</div>
+      </div>
+    </div>
+
+    <div class="block" id="b17" onclick="toggle('b17')">
+      <div class="block-inner">
+        <div class="block-check" id="c17"></div>
+        <div class="block-accent" style="background:var(--english)"></div>
+        <div class="block-info">
+          <div class="block-time">9:00 – 9:30 PM</div>
+          <div class="block-title">📺 English show — Friends / Ted Lasso</div>
+        </div>
+        <div class="block-type" style="background:rgba(155,89,182,0.15);color:var(--english)">English</div>
+      </div>
+    </div>
+
+    <!-- SKILL STATS -->
+    <div class="section-label">Skill Streaks</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">⚙️</div>
+        <div class="stat-name">SAP</div>
+        <div class="stat-streak" style="color:var(--sap)" id="ss-sap">0</div>
+        <div class="stat-days">days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🐍</div>
+        <div class="stat-name">Python</div>
+        <div class="stat-streak" style="color:#A67C00" id="ss-python">0</div>
+        <div class="stat-days">days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🗄️</div>
+        <div class="stat-name">SQL</div>
+        <div class="stat-streak" style="color:var(--sql)" id="ss-sql">0</div>
+        <div class="stat-days">days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📗</div>
+        <div class="stat-name">Excel</div>
+        <div class="stat-streak" style="color:var(--excel)" id="ss-excel">0</div>
+        <div class="stat-days">days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-name">Power BI</div>
+        <div class="stat-streak" style="color:var(--pbi)" id="ss-pbi">0</div>
+        <div class="stat-days">days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🗣️</div>
+        <div class="stat-name">English</div>
+        <div class="stat-streak" style="color:var(--english)" id="ss-english">0</div>
+        <div class="stat-days">days</div>
+      </div>
+    </div>
+
+    <!-- DAILY NOTE -->
+    <div class="section-label">Today's Note</div>
+    <div class="note-section">
+      <div class="note-label">What did you learn today?</div>
+      <textarea class="note-input" id="noteInput" placeholder="Write in English — even 1 sentence counts. What did you study? What was hard? What surprised you?"></textarea>
+      <div class="btn-row">
+        <button class="note-save" onclick="saveNote()">Save Note ✓</button>
+        <button class="action-btn danger" onclick="resetDay()">🔄 Reset Today</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== HISTORY TAB ===================== -->
+  <div class="tab-content" id="tab-history">
+
+    <button class="export-btn" onclick="exportToExcel()">📥 Download Excel — All Data (Month-wise Sheets)</button>
+
+    <div class="month-selector" id="monthSelector"></div>
+
+    <div id="monthSummary" class="month-summary" style="display:none">
+      <div>
+        <div class="summary-stat-val" id="sumDays">0</div>
+        <div class="summary-stat-lbl">Days Tracked</div>
+      </div>
+      <div>
+        <div class="summary-stat-val" id="sumAvg">0%</div>
+        <div class="summary-stat-lbl">Avg Completion</div>
+      </div>
+      <div>
+        <div class="summary-stat-val" id="sumPerfect">0</div>
+        <div class="summary-stat-lbl">Perfect Days</div>
+      </div>
+      <div>
+        <div class="summary-stat-val" id="sumStreak">0</div>
+        <div class="summary-stat-lbl">Best Streak</div>
+      </div>
+    </div>
+
+    <div id="historyList"></div>
+  </div>
+
+  <!-- ===================== SETTINGS TAB ===================== -->
+  <div class="tab-content" id="tab-settings">
+
+    <div class="section-label">Notifications</div>
+    <div class="note-section">
+      <div class="note-label">Daily Reminder Times</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Get browser notifications to remind you to check your tracker</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:13px;">Morning reminder</span>
+          <input type="time" id="notif1" value="08:00" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;outline:none;">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:13px;">Evening reminder</span>
+          <input type="time" id="notif2" value="20:00" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;outline:none;">
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="note-save" onclick="saveNotifSettings()">Save & Enable 🔔</button>
+        <button class="action-btn" id="notifStatusBtn" onclick="checkNotifStatus()">Check Status</button>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:10px;" id="notifStatusText"></p>
+    </div>
+
+    <div class="section-label">Data</div>
+    <div class="note-section">
+      <div class="note-label">Manage Your Data</div>
+      <div class="btn-row" style="flex-direction:column;">
+        <button class="action-btn" style="justify-content:center;" onclick="exportToExcel()">📥 Download All Data as Excel</button>
+        <button class="action-btn danger" style="justify-content:center;" onclick="clearAllData()">🗑️ Clear All Data (cannot undo)</button>
+      </div>
+    </div>
+
+    <div class="section-label">About</div>
+    <div class="note-section" style="font-size:12px;color:var(--muted);line-height:1.8;">
+      <div>📱 <strong style="color:var(--text)">Sanjana's Daily Tracker v2</strong></div>
+      <div>💾 Data saved in browser (localStorage)</div>
+      <div>📅 History available for all past days</div>
+      <div>📊 Excel export with month-wise sheets</div>
+      <div>🔔 Browser notifications for reminders</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOTAL = 18;
+const today = new Date().toDateString();
+
+const BLOCK_NAMES = [
+  'Wake + breakfast', "Sister's Business (AM)", 'English speaking',
+  'Excel', 'SAP', 'Chores (AM)', 'SQL (Hour 1)', 'SQL (Hour 2)',
+  'Lunch + rest', 'Python (Session 1)', 'Chores (PM)', 'Python (Session 2)',
+  'Power BI', 'Free / Chores', 'Light review', 'Dinner + wind down',
+  "Sister's Business (PM)", 'English show'
+];
+
+const skillMap = {
+  sap: ['b4'],
+  python: ['b9', 'b11'],
+  sql: ['b6', 'b7'],
+  excel: ['b3'],
+  pbi: ['b12'],
+  english: ['b2', 'b17']
+};
+
+const quotes = [
+  "Every expert was once a beginner. <strong>You are on your way.</strong>",
+  "You woke up today. That's already Day 1 energy. <strong>Keep going.</strong>",
+  "₹48 LPA doesn't happen by accident. <strong>It happens today.</strong>",
+  "The girl who shows up daily <strong>always beats the girl with talent.</strong>",
+  "SAP + AIML + EY = rare combination. <strong>Nobody else has your mix.</strong>",
+  "Tamil to English. Comfort zone to confidence. <strong>One day at a time.</strong>",
+  "Your future EY manager doesn't know you yet. <strong>Let your skills introduce you.</strong>",
+  "Don't skip — shrink. <strong>15 minutes always beats zero.</strong>"
+];
+
+// State
+let state = JSON.parse(localStorage.getItem('sanjana_state') || '{}');
+let streaks = JSON.parse(localStorage.getItem('sanjana_streaks') || '{"overall":0,"sap":0,"python":0,"sql":0,"excel":0,"pbi":0,"english":0,"lastDate":""}');
+let allHistory = JSON.parse(localStorage.getItem('sanjana_history') || '{}');
+let selectedMonth = null;
+
+// ============ INIT ============
+function init() {
+  document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  document.getElementById('motiveText').innerHTML = quotes[Math.floor(Math.random() * quotes.length)];
+
+  for (let i = 0; i < TOTAL; i++) {
+    if (state['b' + i]) markDone('b' + i, false);
+  }
+
+  const note = localStorage.getItem('sanjana_note_' + today);
+  if (note) document.getElementById('noteInput').value = note;
+
+  document.getElementById('streakNum').textContent = streaks.overall;
+  Object.keys(skillMap).forEach(skill => {
+    document.getElementById('ss-' + skill).textContent = streaks[skill] || 0;
+  });
+
+  updateProgress();
+  checkNotifBanner();
+  scheduleNotifications();
+}
+
+// ============ TABS ============
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'history') renderHistory();
+}
+
+// ============ BLOCK TOGGLE ============
+function markDone(id, save = true) {
+  const block = document.getElementById(id);
+  const check = document.getElementById('c' + id.slice(1));
+  block.classList.add('done');
+  check.innerHTML = '✓';
+  check.style.background = '#2ECC71';
+  check.style.borderColor = '#2ECC71';
+  check.style.color = 'white';
+  if (save) {
+    state[id] = true;
+    localStorage.setItem('sanjana_state', JSON.stringify(state));
+  }
+}
+
+function markUndone(id) {
+  const block = document.getElementById(id);
+  const check = document.getElementById('c' + id.slice(1));
+  block.classList.remove('done');
+  check.innerHTML = '';
+  check.style.background = '';
+  check.style.borderColor = '';
+  check.style.color = '';
+  state[id] = false;
+  localStorage.setItem('sanjana_state', JSON.stringify(state));
+}
+
+function toggle(id) {
+  if (state[id]) {
+    markUndone(id);
+  } else {
+    markDone(id);
+    showToast(getToastMsg(id));
+    checkStreaks();
+  }
+  updateProgress();
+  saveHistoryForToday();
+}
+
+function getToastMsg(id) {
+  const msgs = {
+    b2: "🗣️ English done! Say it out loud once more.",
+    b3: "📗 Excel checked! You're building real skills.",
+    b4: "⚙️ SAP done! EY will notice this.",
+    b6: "🗄️ SQL first hour! Logic thinking = ₹.",
+    b7: "🗄️ SQL both hours! You're dangerous now.",
+    b9: "🐍 Python session 1! Code every day.",
+    b11: "🐍 Python both sessions! Keep coding.",
+    b12: "📊 Power BI done! Clients love dashboards.",
+    b14: "📝 Review done! Brain locked it in.",
+    b17: "📺 English show done! Ears trained.",
+  };
+  return msgs[id] || "✅ Block done! Keep going Sanjana!";
+}
+
+function updateProgress() {
+  const done = Object.values(state).filter(Boolean).length;
+  const pct = Math.round((done / TOTAL) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${done} / ${TOTAL} done (${pct}%)`;
+}
+
+// ============ STREAKS ============
+function checkStreaks() {
+  const todayStr = today;
+  if (streaks.lastDate !== todayStr) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (streaks.lastDate === yesterday.toDateString()) {
+      streaks.overall++;
+    } else {
+      streaks.overall = 1;
+    }
+    streaks.lastDate = todayStr;
+  }
+
+  Object.keys(skillMap).forEach(skill => {
+    const allDone = skillMap[skill].every(id => state[id]);
+    const lastKey = 'last_' + skill;
+    if (allDone && streaks[lastKey] !== todayStr) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (streaks[lastKey] === yesterday.toDateString()) {
+        streaks[skill] = (streaks[skill] || 0) + 1;
+      } else {
+        streaks[skill] = 1;
+      }
+      streaks[lastKey] = todayStr;
+      document.getElementById('ss-' + skill).textContent = streaks[skill];
+    }
+  });
+
+  document.getElementById('streakNum').textContent = streaks.overall;
+  localStorage.setItem('sanjana_streaks', JSON.stringify(streaks));
+}
+
+// ============ NOTE ============
+function saveNote() {
+  const note = document.getElementById('noteInput').value;
+  localStorage.setItem('sanjana_note_' + today, note);
+  saveHistoryForToday();
+  showToast('📝 Note saved! Good reflection.');
+}
+
+// ============ RESET ============
+function resetDay() {
+  if (!confirm("Reset today's progress? Streaks are kept.")) return;
+  state = {};
+  localStorage.setItem('sanjana_state', JSON.stringify(state));
+  for (let i = 0; i < TOTAL; i++) markUndone('b' + i);
+  updateProgress();
+  saveHistoryForToday();
+  showToast('🔄 Reset! Fresh start.');
+}
+
+// ============ HISTORY STORAGE ============
+function saveHistoryForToday() {
+  const note = localStorage.getItem('sanjana_note_' + today) || '';
+  const done = Object.values(state).filter(Boolean).length;
+  const pct = Math.round((done / TOTAL) * 100);
+  allHistory[today] = {
+    date: today,
+    blocks: { ...state },
+    note: note,
+    done: done,
+    pct: pct
+  };
+  localStorage.setItem('sanjana_history', JSON.stringify(allHistory));
+}
+
+// ============ HISTORY RENDER ============
+function renderHistory() {
+  const monthSel = document.getElementById('monthSelector');
+  const histList = document.getElementById('historyList');
+
+  // Get all unique months from history
+  const months = {};
+  Object.keys(allHistory).forEach(dateStr => {
+    const d = new Date(dateStr);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    months[key] = label;
+  });
+
+  const sortedMonths = Object.keys(months).sort().reverse();
+
+  if (sortedMonths.length === 0) {
+    monthSel.innerHTML = '';
+    histList.innerHTML = '<div class="empty-history">📭 No history yet. Start checking off your blocks today!</div>';
+    document.getElementById('monthSummary').style.display = 'none';
+    return;
+  }
+
+  if (!selectedMonth || !months[selectedMonth]) {
+    selectedMonth = sortedMonths[0];
+  }
+
+  // Render month buttons
+  monthSel.innerHTML = sortedMonths.map(m =>
+    `<button class="month-btn ${m === selectedMonth ? 'active' : ''}" onclick="selectMonth('${m}')">${months[m]}</button>`
+  ).join('');
+
+  renderMonthDays(selectedMonth);
+}
+
+function selectMonth(m) {
+  selectedMonth = m;
+  renderHistory();
+}
+
+function renderMonthDays(monthKey) {
+  const histList = document.getElementById('historyList');
+  const [year, month] = monthKey.split('-').map(Number);
+
+  // Filter days for this month
+  const days = Object.keys(allHistory)
+    .filter(dateStr => {
+      const d = new Date(dateStr);
+      return d.getFullYear() === year && (d.getMonth() + 1) === month;
+    })
+    .sort((a, b) => new Date(b) - new Date(a));
+
+  if (days.length === 0) {
+    histList.innerHTML = '<div class="empty-history">📭 No data for this month yet.</div>';
+    document.getElementById('monthSummary').style.display = 'none';
+    return;
+  }
+
+  // Compute summary
+  const totalDone = days.reduce((s, d) => s + allHistory[d].pct, 0);
+  const avgPct = Math.round(totalDone / days.length);
+  const perfectDays = days.filter(d => allHistory[d].done === TOTAL).length;
+
+  // Best streak in month
+  let bestStreak = 0, curStreak = 0;
+  const sortedAsc = [...days].sort((a, b) => new Date(a) - new Date(b));
+  for (let i = 0; i < sortedAsc.length; i++) {
+    if (allHistory[sortedAsc[i]].pct >= 50) {
+      curStreak++;
+      bestStreak = Math.max(bestStreak, curStreak);
+    } else {
+      curStreak = 0;
+    }
+  }
+
+  document.getElementById('sumDays').textContent = days.length;
+  document.getElementById('sumAvg').textContent = avgPct + '%';
+  document.getElementById('sumPerfect').textContent = perfectDays;
+  document.getElementById('sumStreak').textContent = bestStreak;
+  document.getElementById('monthSummary').style.display = 'grid';
+
+  // Render days
+  histList.innerHTML = days.map((dateStr, idx) => {
+    const entry = allHistory[dateStr];
+    const d = new Date(dateStr);
+    const label = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+    const color = entry.pct >= 80 ? '#2ECC71' : entry.pct >= 50 ? '#F2C811' : '#E8440A';
+
+    const blockPills = BLOCK_NAMES.map((name, i) => {
+      const isDone = entry.blocks['b' + i];
+      return `<span class="history-block-pill ${isDone ? 'done-pill' : ''}">${isDone ? '✓' : '✗'} ${name}</span>`;
+    }).join('');
+
+    const noteHtml = entry.note ? `<div class="history-note">💬 "${entry.note}"</div>` : '';
+
+    return `
+      <div class="history-day" id="hday-${idx}">
+        <div class="history-day-header" onclick="toggleHistoryDay(${idx})">
+          <div class="history-date">${label}</div>
+          <div class="history-meta">
+            <div class="history-pct" style="color:${color}">${entry.pct}%</div>
+            <div style="font-size:11px;color:var(--muted)">${entry.done}/${TOTAL}</div>
+            <div class="history-chevron">▼</div>
+          </div>
+        </div>
+        <div class="history-detail">
+          <div class="history-blocks">${blockPills}</div>
+          ${noteHtml}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleHistoryDay(idx) {
+  const el = document.getElementById('hday-' + idx);
+  el.classList.toggle('expanded');
+}
+
+// ============ EXCEL EXPORT ============
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // Group history by month
+  const byMonth = {};
+  Object.keys(allHistory).forEach(dateStr => {
+    const d = new Date(dateStr);
+    const key = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    if (!byMonth[key]) byMonth[key] = [];
+    byMonth[key].push(dateStr);
+  });
+
+  if (Object.keys(byMonth).length === 0) {
+    showToast('⚠️ No data to export yet!');
+    return;
+  }
+
+  // Sort months chronologically
+  const sortedMonths = Object.keys(byMonth).sort((a, b) => new Date(byMonth[a][0]) - new Date(byMonth[b][0]));
+
+  sortedMonths.forEach(monthLabel => {
+    const days = byMonth[monthLabel].sort((a, b) => new Date(a) - new Date(b));
+
+    // Header row
+    const header = ['Date', 'Day', ...BLOCK_NAMES, 'Total Done', 'Completion %', 'Note'];
+    const rows = [header];
+
+    days.forEach(dateStr => {
+      const entry = allHistory[dateStr];
+      const d = new Date(dateStr);
+      const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' });
+      const blockVals = BLOCK_NAMES.map((_, i) => entry.blocks['b' + i] ? '✓' : '');
+      rows.push([
+        d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        dayName,
+        ...blockVals,
+        entry.done,
+        entry.pct + '%',
+        entry.note || ''
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 12 }, { wch: 12 },
+      ...BLOCK_NAMES.map(() => ({ wch: 18 })),
+      { wch: 12 }, { wch: 14 }, { wch: 40 }
+    ];
+
+    // Shorten sheet name to 31 chars (Excel limit)
+    const sheetName = monthLabel.slice(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  // Summary sheet
+  const summaryHeader = ['Month', 'Days Tracked', 'Avg Completion %', 'Perfect Days (100%)', 'Total Blocks Done'];
+  const summaryRows = [summaryHeader];
+  sortedMonths.forEach(monthLabel => {
+    const days = byMonth[monthLabel];
+    const entries = days.map(d => allHistory[d]);
+    const avg = Math.round(entries.reduce((s, e) => s + e.pct, 0) / entries.length);
+    const perfect = entries.filter(e => e.done === TOTAL).length;
+    const totalBlocks = entries.reduce((s, e) => s + e.done, 0);
+    summaryRows.push([monthLabel, days.length, avg + '%', perfect, totalBlocks]);
+  });
+  const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
+  summaryWs['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 20 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+  XLSX.writeFile(wb, `Sanjana_Tracker_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('📥 Excel downloaded!');
+}
+
+// ============ NOTIFICATIONS ============
+function checkNotifBanner() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    document.getElementById('notifBanner').style.display = 'flex';
+  }
+}
+
+function enableNotifications() {
+  if (!('Notification' in window)) {
+    showToast('❌ Browser does not support notifications');
+    return;
+  }
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') {
+      document.getElementById('notifBanner').style.display = 'none';
+      showToast('🔔 Notifications enabled!');
+      scheduleNotifications();
+    } else {
+      showToast('❌ Notification permission denied');
+    }
+  });
+}
+
+function saveNotifSettings() {
+  const t1 = document.getElementById('notif1').value;
+  const t2 = document.getElementById('notif2').value;
+  localStorage.setItem('sanjana_notif1', t1);
+  localStorage.setItem('sanjana_notif2', t2);
+  enableNotifications();
+  showToast('🔔 Reminder times saved!');
+}
+
+function checkNotifStatus() {
+  const statusEl = document.getElementById('notifStatusText');
+  if (!('Notification' in window)) {
+    statusEl.textContent = '❌ Notifications not supported in this browser.';
+  } else if (Notification.permission === 'granted') {
+    statusEl.textContent = '✅ Notifications are enabled! Reminders will fire at your set times when the app is open.';
+  } else if (Notification.permission === 'denied') {
+    statusEl.textContent = '❌ Notifications blocked. Please allow in browser settings.';
+  } else {
+    statusEl.textContent = '⏳ Notifications not yet enabled. Click "Save & Enable".';
+  }
+}
+
+function scheduleNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const t1 = localStorage.getItem('sanjana_notif1') || '08:00';
+  const t2 = localStorage.getItem('sanjana_notif2') || '20:00';
+
+  [t1, t2].forEach((timeStr, i) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    const now = new Date();
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    const delay = target - now;
+
+    setTimeout(() => {
+      const done = Object.values(state).filter(Boolean).length;
+      const pct = Math.round((done / TOTAL) * 100);
+      const msgs = [
+        `Good morning Sanjana! 🌅 Time to crush today's schedule!`,
+        `Evening check-in 🌙 You've done ${pct}% (${done}/${TOTAL} blocks) today. Keep going!`
+      ];
+      new Notification("Sanjana's Tracker 🔥", {
+        body: msgs[i],
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🔥</text></svg>'
+      });
+    }, delay);
+  });
+
+  // Load saved times in settings
+  if (document.getElementById('notif1')) {
+    document.getElementById('notif1').value = t1;
+    document.getElementById('notif2').value = t2;
+  }
+}
+
+// ============ CLEAR DATA ============
+function clearAllData() {
+  if (!confirm('⚠️ This will delete ALL your tracker data and history. Are you sure?')) return;
+  if (!confirm('Really sure? This cannot be undone!')) return;
+  localStorage.clear();
+  location.reload();
+}
+
+// ============ TOAST ============
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+init();
+</script>
+</body>
+</html>
