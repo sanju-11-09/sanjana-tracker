@@ -1134,8 +1134,6 @@ function updatePinDots() {
 
 function checkPin() {
   if (pinEntry === CORRECT_PIN) {
-    // Check session
-    sessionStorage.setItem('sanjana_unlocked', '1');
     document.getElementById('pinOverlay').style.display = 'none';
     init();
   } else {
@@ -1147,11 +1145,7 @@ function checkPin() {
   }
 }
 
-// Check if already unlocked this session
-if (sessionStorage.getItem('sanjana_unlocked') === '1') {
-  document.getElementById('pinOverlay').style.display = 'none';
-  init();
-}
+// Always show PIN on every open — init() called only after correct PIN
 
 const BLOCK_NAMES = [
   'Wake + breakfast', "Sister's Business (AM)", 'English speaking',
